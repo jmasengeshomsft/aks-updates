@@ -1,0 +1,126 @@
+# creat stress namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stress
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-hog
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: cpu-hog
+  template:
+    metadata:
+      labels:
+        app: cpu-hog
+    spec:
+      nodeSelector:
+        karpenter.nodepool/name: stress
+      containers:
+      - name: cpu-hog
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--cpu", "2", "--timeout", "1800s"]
+        resources:
+          requests:
+            cpu: "2"
+            memory: "128Mi"
+          limits:
+            cpu: "2"
+            memory: "128Mi"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-hog
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: memory-hog
+  template:
+    metadata:
+      labels:
+        app: memory-hog
+    spec:
+      nodeSelector:
+        karpenter.nodepool/name: stress
+      containers:
+      - name: memory-hog
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--vm", "1", "--vm-bytes", "2G", "--timeout", "1800s"]
+        resources:
+          requests:
+            cpu: 1
+            memory: "2Gi"
+          limits:
+            cpu: 2
+            memory: "4Gi"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-mem-hog
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: cpu-mem-hog
+  template:
+    metadata:
+      labels:
+        app: cpu-mem-hog
+    spec:
+      nodeSelector:
+        karpenter.nodepool/name: stress
+      containers:
+      - name: cpu-mem-hog
+        image: polinux/stress
+        command: ["stress"]
+        args: ["--cpu", "2", "--vm", "1", "--vm-bytes", "2G", "--timeout", "1800s"]
+        resources:
+          requests:
+            cpu: "2"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idle-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: idle-app
+  template:
+    metadata:
+      labels:
+        app: idle-app
+    spec:
+      nodeSelector:
+        karpenter.nodepool/name: stress
+      containers:
+      - name: idle-container
+        image: busybox
+        args: ["sleep", "3600"]
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            cpu: "50m"
+            memory: "32Mi"
